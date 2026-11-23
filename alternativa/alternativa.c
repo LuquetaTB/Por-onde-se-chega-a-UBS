@@ -139,6 +139,82 @@ void adicionar_trecho(Grafo *grafo, const char *a, const char *b, int minutos){
     printf("OK\n");
 
 }
+
+//Função auxiliar que procura uma aresta direta entre destino e origem, retornando um ponteiro para a aresta caso exista, ou NULL caso contrário
+Aresta* buscar_aresta(No *origem, No *destino){
+    if (origem == NULL || destino == NULL){
+        return NULL;
+    }
+
+    Aresta *atual = origem->adjacentes;
+    while(atual != NULL){
+        if (atual->destino == destino){
+            return atual;
+        }
+        atual = atual->prox_aresta;
+    }
+
+    return NULL;
+}
+
+//Função que alaga um trecho entre dois pontos, confere se os pontos existem, se a aresta existe e se já está alagada
+void alagar_trecho(Grafo *grafo, const char *codA, const char *codB){
+    No *noA = buscar_ponto(grafo, codA);
+    No *noB = buscar_ponto(grafo, codB);
+
+    if (noA == NULL || noB == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    Aresta *ida = buscar_aresta(noA, noB);
+    Aresta *volta = buscar_aresta(noB, noA);
+
+    if (ida == NULL || volta == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    if (ida->alagada == 1 || volta->alagada == 1){
+        printf("JA\n");
+        return;
+    }
+
+    ida->alagada = 1;
+    volta->alagada = 1;
+
+    printf("OK\n");
+}
+
+//Função que libera um trecho entre dois pontos, confere se os pontos existem, se a aresta existe e se já está liberada
+void libera_trecho(Grafo *grafo, const char *codA, const char *codB){
+    No *noA = buscar_ponto(grafo, codA);
+    No *noB = buscar_ponto(grafo, codB);
+
+    if (noA == NULL || noB == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    Aresta *ida = buscar_aresta(noA, noB);
+    Aresta *volta = buscar_aresta(noB, noA);
+
+    if (ida == NULL || volta == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    if (ida->alagada == 0 || volta->alagada == 0){
+        printf("JA\n");
+        return;
+    }
+
+    ida->alagada = 0;
+    volta->alagada = 0;
+
+    printf("OK\n");
+}
+
 int main(){
 
     return 0;
