@@ -74,6 +74,71 @@ void adicionar_ponto(Grafo *grafo, const char *codigo){
         printf("DUPLICADO\n");
     }
 }
+int buscar_trecho(No *origem, No *destino){
+    Aresta *atual = origem->adjacentes;
+
+    while(atual != NULL){
+        if(atual->destino == destino){
+            return 1;
+        }
+
+        atual = atual->prox_aresta;
+    }
+
+    return 0;
+}
+void adicionar_trecho(Grafo *grafo, const char *a, const char *b, int minutos){
+    if(minutos <= 0 || strcmp(a,b) == 0){
+        printf("INVALIDO\n");
+        return;
+    }
+
+    No *ponto_a = buscar_ponto(grafo, a);
+    if(ponto_a==NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    No *ponto_b = buscar_ponto(grafo, b);
+    if(ponto_b == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    if(buscar_trecho(ponto_a, ponto_b)){
+        printf("DUPLICADO\n");
+        return;
+    }
+
+    Aresta *aresta_ab = malloc(sizeof(Aresta));
+    if(aresta_ab == NULL){
+        printf("ERRO\n");
+        return;
+    }
+    Aresta *aresta_ba = malloc(sizeof(Aresta));
+    if(aresta_ba == NULL){
+        printf("ERRO\n");
+        free(aresta_ab);
+        return;
+    }
+
+    aresta_ab->destino = ponto_b;
+    aresta_ab->minutos = minutos;
+    aresta_ab->alagada = 0;
+
+    aresta_ab->prox_aresta = ponto_a->adjacentes;
+    ponto_a->adjacentes = aresta_ab;
+
+    aresta_ba->destino = ponto_a;
+    aresta_ba->minutos = minutos;
+    aresta_ba->alagada = 0;
+
+    aresta_ba->prox_aresta = ponto_b->adjacentes;
+    ponto_b->adjacentes = aresta_ba;
+
+    printf("OK\n");
+
+}
 int main(){
 
     return 0;
