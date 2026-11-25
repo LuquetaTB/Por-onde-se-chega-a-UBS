@@ -15,6 +15,8 @@ typedef struct No{
     char ponto[10];
     struct No *proximo;
     int eh_ubs;
+    int visitado;
+    int passos;
     Aresta *adjacentes;
 }No;
 
@@ -23,6 +25,16 @@ typedef struct Grafo{
     No *inicio;
     int quantidade;
 }Grafo;
+
+typedef struct Nofila{
+    No *ponto;
+    struct Nofila *prox;
+}Nofila;
+
+typedef struct Fila{
+    Nofila *inicio;
+    Nofila *fim;
+}Fila;
 
 Grafo* criarGrafo(){
     Grafo *grafo = malloc(sizeof(Grafo));
@@ -62,6 +74,8 @@ void adicionar_ponto(Grafo *grafo, const char *codigo){
 
         strcpy(novo->ponto, codigo);
         novo->eh_ubs = 0;
+        novo->visitado = 0;
+        novo->passos = 0;
         novo->adjacentes = NULL;
 
         novo->proximo = grafo->inicio;
@@ -214,7 +228,95 @@ void libera_trecho(Grafo *grafo, const char *codA, const char *codB){
 
     printf("OK\n");
 }
+void inicializarFila(Fila *fila){
+    fila->inicio = NULL;
+    fila->fim = NULL;
+}
+int estavazia(Fila *fila){
+    return fila->inicio == NULL;
+}
+void enfileirar(Fila *fila, No *no){
+    Nofila *novo = malloc(sizeof(Nofila));
+    if(novo == NULL){
+        printf("ERRO\n");
+        return;
+    }
 
+    novo->ponto = no;
+    novo->prox = NULL;
+
+    if(estavazia(fila)){
+        fila->inicio = novo;
+        fila->fim = novo;
+    }else{
+        fila->fim->prox = novo;
+        fila->fim = novo;
+    }
+
+}
+No* desenfileirar(Fila *fila){
+    if(estavazia(fila)){
+        printf("ERRO\n");
+        return NULL;
+    }
+    Nofila *aux = fila->inicio;
+    No *ponto = aux->ponto;
+    fila->inicio = fila->inicio->prox;
+    
+    if(fila->inicio == NULL){
+        fila->fim = NULL;
+    }
+
+    free(aux);
+    return ponto;
+}
+void inicializar_visitados(Grafo *grafo){
+    No *atual = grafo->inicio;
+
+    while(atual != NULL){
+        atual->visitado = 0;
+        atual = atual->proximo;
+    }
+
+}
+int qnt_passos(Grafo *grafo,Fila *fila, const char *a, const char *b){
+    inicializar_visitados(grafo);
+    inicializarFila(fila);
+
+    No *ponto_a = buscar_ponto(grafo, a);
+    No *ponto_b = buscar_ponto(grafo, b);
+
+    ponto_a->passos = 0;
+    ponto_a->visitado = 1;
+    enfileirar(fila, ponto_a);
+
+    while (!estavazia(fila)){
+        No *vertice = desenfileirar(fila);
+        Aresta *vizinhos = vertice->adjacentes;
+
+        while(vizinhos != NULL){
+            if(vizinhos->alagada || vizinhos->destino->visitado){
+                vizinhos = vizinhos->prox_aresta;
+                continue;
+            }
+            vizinhos->destino->visitado = 1;
+            vizinhos->destino->passos = vertice->passos + 1;
+
+            if(vizinhos->destino == ponto_b){
+                return vizinhos->destino->passos;
+            }else{
+                enfileirar(fila, vizinhos->destino);
+            }
+
+            vizinhos = vizinhos->prox_aresta;
+            
+        }
+        
+    }
+
+    return -1;
+    
+}
 int main(){
 
     return 0;
