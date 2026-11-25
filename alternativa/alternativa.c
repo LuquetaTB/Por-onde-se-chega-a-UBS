@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct No No;
 //Representa a estrutura de uma aresta/trecho
 typedef struct Aresta{
     No *destino;
@@ -12,13 +13,15 @@ typedef struct Aresta{
 
 //Representa a estrutura de um nó/vertice
 typedef struct No{
-    char ponto[10];
+    char ponto[13];
     struct No *proximo;
     int eh_ubs;
     int visitado;
     int passos;
+    int tempominutos;
+    struct No *anterior;
     Aresta *adjacentes;
-}No;
+} No;
 
 // Estrutura para representar o grafo com pontero para o nó inicial e a quantidade de nós
 typedef struct Grafo{
@@ -317,6 +320,59 @@ int qnt_passos(Grafo *grafo,Fila *fila, const char *a, const char *b){
     return -1;
     
 }
+
+//Função auxiliar para achar o nó não visitado com menor tempo em minutos
+No* menor_tempo(Grafo *grafo){
+    No *atual = grafo->inicio;
+    No *menor = NULL;
+    int menorValor = INT_MAX;
+
+    while(atual != NULL){
+        if(!atual->visitado && atual->tempominutos < menorValor){
+            menorValor = atual->tempominutos;
+            menor = atual;
+        }
+        atual = atual->proximo;
+    }
+    return menor;
+}
+
+//Função que executa o Dijkstra a partir da origem até encontrar o destino, com o menor tempo em minutos, considerando os trechos alagados como intransitáveis
+int executaDijkstra(Grafo *grafo, No *origem, No *destino){
+    No *atual = grafo->inicio;
+    while(atual != NULL){
+        atual->tempominutos = INT_MAX;
+        atual->anterior = NULL;
+        atual->visitado = 0;
+        atual = atual->proximo;
+    }
+
+    origem->tempominutos = 0;
+
+    while(1){
+        No *noAtual = menor_tempo(grafo);
+
+        if(noAtual == NULL || noAtual == destino){
+            break;
+        }
+        noAtual->visitado = 1;
+
+        Aresta *aresta = noAtual->adjacentes;
+        while(aresta != NULL){
+            if(!aresta->alagada && !aresta->destino->visitado){
+                int novoTempo = noAtual->tempominutos + aresta->minutos;
+                if(novoTempo < aresta->destino->tempominutos){
+                    aresta->destino->tempominutos = novoTempo;
+                    aresta->destino->anterior = noAtual;
+                }
+            }
+            aresta = aresta->prox_aresta;
+        }
+    }
+
+    return (destino->tempominutos == INT_MAX) ? -1 : destino->tempominutos;
+}
+
 int main(){
 
     return 0;
