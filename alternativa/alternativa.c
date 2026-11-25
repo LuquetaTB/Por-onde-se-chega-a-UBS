@@ -373,6 +373,38 @@ int executaDijkstra(Grafo *grafo, No *origem, No *destino){
     return (destino->tempominutos == INT_MAX) ? -1 : destino->tempominutos;
 }
 
+//Função simples para imprrimir o caminho encontrado pelo Dijkstra, recursivamente, do destino até a origem
+void imprimircaminhorecur(No *atual){
+    if(atual == NULL){
+        return;
+    }
+
+    imprimircaminhorecur(atual->anterior);
+    printf("%s ", atual->ponto);
+}
+
+//Função que realiza a rota entre dois pontos, usando o Dijkstra para achar o menor tempo em minutos, considerando os trechos alagados como inacessíveis, e traz a tratativa dele.
+//Caso algum ponto não exista, imprime "NAOEXISTE". Caso não exista caminho entre os pontos, imprime "SEMCAMINHO".
+void rota(Grafo *grafo, const char *codA, const char *codB){
+    No *ponto_a = buscar_ponto(grafo, codA);
+    No *ponto_b = buscar_ponto(grafo, codB);
+
+    if(ponto_a == NULL || ponto_b == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    int tempo = executaDijkstra(grafo, ponto_a, ponto_b);
+
+    if(tempo == -1){
+        printf("SEMCAMINHO\n");
+        return;
+    }
+
+    imprimircaminhorecur(ponto_b);
+    printf("\n%d\n", tempo);
+}
+
 int main(){
 
     return 0;
