@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 typedef struct No No;
 //Representa a estrutura de uma aresta/trecho
@@ -404,7 +405,50 @@ void rota(Grafo *grafo, const char *codA, const char *codB){
     imprimircaminhorecur(ponto_b);
     printf("\n%d\n", tempo);
 }
+int isolados(Grafo *grafo, Fila *fila){
+    inicializar_visitados(grafo);
+    inicializarFila(fila);
 
+    int cont = 0;
+
+    No *atual = grafo->inicio;
+    while(atual != NULL){
+        if(atual->eh_ubs){
+            atual->visitado = 1;
+            enfileirar(fila, atual);
+        }
+
+        atual = atual->proximo;
+    }
+
+    while(!estavazia(fila)){
+        No *vertice = desenfileirar(fila);
+        Aresta *vizinhos = vertice->adjacentes;
+
+        while(vizinhos != NULL){
+            if(vizinhos->alagada || vizinhos->destino->visitado){
+                vizinhos = vizinhos->prox_aresta;
+                continue;
+            }
+
+            vizinhos->destino->visitado = 1;
+            enfileirar(fila, vizinhos->destino);
+
+            vizinhos = vizinhos->prox_aresta;
+        }   
+    }
+
+    atual = grafo->inicio;
+    while (atual !=NULL){
+        if(!atual->visitado){
+            cont++;
+        }
+        atual = atual->proximo;
+    }
+
+    return cont;
+    
+}
 int main(){
 
     return 0;
