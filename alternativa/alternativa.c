@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <time.h>
+
+#define TAM_CODIGO 12
 
 typedef struct No No;
 //Representa a estrutura de uma aresta/trecho
@@ -48,11 +51,31 @@ Grafo* criarGrafo(){
 
     return grafo;
 }
+
+// Compara dois códigos caractere por caractere. Retorna <0 se a vem antes, 0 se iguais, >0 se a vem depois.
+int comparar_codigos(const char *a, const char *b){
+    int i = 0;
+    while(a[i] != '\0' && a[i] == b[i]){
+        i++;
+    }
+    return (unsigned char)a[i] - (unsigned char)b[i];
+}
+
+// Copia o código para o destino (no máximo TAM_CODIGO caracteres).
+void copiar_codigo(char *destino, const char *origem){
+    int i = 0;
+    while(origem[i] != '\0' && i < TAM_CODIGO){
+        destino[i] = origem[i];
+        i++;
+    }
+    destino[i] = '\0';
+}
+
 No* buscar_ponto(Grafo *grafo, const char *codigo){
     No *atual = grafo->inicio;
 
     while(atual != NULL){
-        if(strcmp(atual->ponto, codigo)==0){
+        if(comparar_codigos(atual->ponto, codigo)==0){
             return atual;
         }
 
@@ -61,25 +84,22 @@ No* buscar_ponto(Grafo *grafo, const char *codigo){
 
     return NULL;
 }
-void adicionar_ponto(Grafo *grafo, const char *codigo){
-    if(strlen(codigo) > 9){
-        printf("ERRO\n");
-        return;
-    }
-
+void adicionar_ponto(Grafo *grafo, const char *codigo, int eh_ubs){
     No *resultado = buscar_ponto(grafo, codigo);
 
     if(resultado==NULL){
         No *novo = malloc(sizeof(No));
         if (novo == NULL){
-            printf("ERRO\n");
-            return;
+            fprintf(stderr, "Sem memoria\n");
+            exit(1);
         }
 
-        strcpy(novo->ponto, codigo);
-        novo->eh_ubs = 0;
+        copiar_codigo(novo->ponto, codigo);
+        novo->eh_ubs = eh_ubs;
         novo->visitado = 0;
         novo->passos = 0;
+        novo->tempominutos = 0;
+        novo->anterior = NULL;
         novo->adjacentes = NULL;
 
         novo->proximo = grafo->inicio;
@@ -92,6 +112,7 @@ void adicionar_ponto(Grafo *grafo, const char *codigo){
         printf("DUPLICADO\n");
     }
 }
+
 int buscar_trecho(No *origem, No *destino){
     Aresta *atual = origem->adjacentes;
 
@@ -105,21 +126,18 @@ int buscar_trecho(No *origem, No *destino){
 
     return 0;
 }
+
 void adicionar_trecho(Grafo *grafo, const char *a, const char *b, int minutos){
-    if(minutos <= 0 || strcmp(a,b) == 0){
-        printf("INVALIDO\n");
-        return;
-    }
-
     No *ponto_a = buscar_ponto(grafo, a);
-    if(ponto_a==NULL){
+    No *ponto_b = buscar_ponto(grafo, b);
+
+    if(ponto_a == NULL || ponto_b == NULL){
         printf("NAOEXISTE\n");
         return;
     }
 
-    No *ponto_b = buscar_ponto(grafo, b);
-    if(ponto_b == NULL){
-        printf("NAOEXISTE\n");
+    if(minutos <= 0 || ponto_a == ponto_b){
+        printf("INVALIDO\n");
         return;
     }
 
@@ -129,15 +147,10 @@ void adicionar_trecho(Grafo *grafo, const char *a, const char *b, int minutos){
     }
 
     Aresta *aresta_ab = malloc(sizeof(Aresta));
-    if(aresta_ab == NULL){
-        printf("ERRO\n");
-        return;
-    }
     Aresta *aresta_ba = malloc(sizeof(Aresta));
-    if(aresta_ba == NULL){
-        printf("ERRO\n");
-        free(aresta_ab);
-        return;
+    if(aresta_ab == NULL || aresta_ba == NULL){
+        fprintf(stderr, "Sem memoria\n");
+        exit(1);
     }
 
     aresta_ab->destino = ponto_b;
@@ -155,7 +168,6 @@ void adicionar_trecho(Grafo *grafo, const char *a, const char *b, int minutos){
     ponto_b->adjacentes = aresta_ba;
 
     printf("OK\n");
-
 }
 
 //Função auxiliar que procura uma aresta direta entre destino e origem, retornando um ponteiro para a aresta caso exista, ou NULL caso contrário
@@ -242,8 +254,8 @@ int estavazia(Fila *fila){
 void enfileirar(Fila *fila, No *no){
     Nofila *novo = malloc(sizeof(Nofila));
     if(novo == NULL){
-        printf("ERRO\n");
-        return;
+        fprintf(stderr, "Sem memoria\n");
+        exit(1);
     }
 
     novo->ponto = no;
@@ -260,7 +272,6 @@ void enfileirar(Fila *fila, No *no){
 }
 No* desenfileirar(Fila *fila){
     if(estavazia(fila)){
-        printf("ERRO\n");
         return NULL;
     }
     Nofila *aux = fila->inicio;
@@ -274,6 +285,14 @@ No* desenfileirar(Fila *fila){
     free(aux);
     return ponto;
 }
+
+//Esvazia a fila liberando a memória dos nós que sobraram
+void liberar_fila(Fila *fila){
+    while(!estavazia(fila)){
+        desenfileirar(fila);
+    }
+}
+
 void inicializar_visitados(Grafo *grafo){
     No *atual = grafo->inicio;
 
