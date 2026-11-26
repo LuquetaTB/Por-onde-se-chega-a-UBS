@@ -302,12 +302,15 @@ void inicializar_visitados(Grafo *grafo){
     }
 
 }
-int qnt_passos(Grafo *grafo,Fila *fila, const char *a, const char *b){
+
+//BFS: menor número de trechos de a até b. Retorna -1 se não houver caminho.
+int qnt_passos(Grafo *grafo, Fila *fila, No *ponto_a, No *ponto_b){
+    if(ponto_a == ponto_b){
+        return 0;
+    }
+
     inicializar_visitados(grafo);
     inicializarFila(fila);
-
-    No *ponto_a = buscar_ponto(grafo, a);
-    No *ponto_b = buscar_ponto(grafo, b);
 
     ponto_a->passos = 0;
     ponto_a->visitado = 1;
@@ -326,19 +329,36 @@ int qnt_passos(Grafo *grafo,Fila *fila, const char *a, const char *b){
             vizinhos->destino->passos = vertice->passos + 1;
 
             if(vizinhos->destino == ponto_b){
+                liberar_fila(fila);
                 return vizinhos->destino->passos;
             }else{
                 enfileirar(fila, vizinhos->destino);
             }
 
             vizinhos = vizinhos->prox_aresta;
-            
         }
-        
     }
 
     return -1;
-    
+}
+
+//Trata a operação PASSOS a b
+void passos(Grafo *grafo, Fila *fila, const char *codA, const char *codB){
+    No *ponto_a = buscar_ponto(grafo, codA);
+    No *ponto_b = buscar_ponto(grafo, codB);
+
+    if(ponto_a == NULL || ponto_b == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    int resultado = qnt_passos(grafo, fila, ponto_a, ponto_b);
+
+    if(resultado == -1){
+        printf("SEMCAMINHO\n");
+    }else{
+        printf("%d\n", resultado);
+    }
 }
 
 //Função auxiliar para achar o nó não visitado com menor tempo em minutos
@@ -390,7 +410,29 @@ int executaDijkstra(Grafo *grafo, No *origem, No *destino){
         }
     }
 
+    if(destino == NULL){
+        return 0;
+    }
     return (destino->tempominutos == INT_MAX) ? -1 : destino->tempominutos;
+}
+
+//Trata a operação TEMPO a b
+void tempo(Grafo *grafo, const char *codA, const char *codB){
+    No *ponto_a = buscar_ponto(grafo, codA);
+    No *ponto_b = buscar_ponto(grafo, codB);
+
+    if(ponto_a == NULL || ponto_b == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    int resultado = executaDijkstra(grafo, ponto_a, ponto_b);
+
+    if(resultado == -1){
+        printf("SEMCAMINHO\n");
+    }else{
+        printf("%d\n", resultado);
+    }
 }
 
 //Função simples para imprrimir o caminho encontrado pelo Dijkstra, recursivamente, do destino até a origem
@@ -400,7 +442,7 @@ void imprimircaminhorecur(No *atual){
     }
 
     imprimircaminhorecur(atual->anterior);
-    printf("%s ", atual->ponto);
+    printf(" %s", atual->ponto);
 }
 
 //Função que realiza a rota entre dois pontos, usando o Dijkstra para achar o menor tempo em minutos, considerando os trechos alagados como inacessíveis, e traz a tratativa dele.
@@ -421,9 +463,74 @@ void rota(Grafo *grafo, const char *codA, const char *codB){
         return;
     }
 
+    printf("%d", tempo);
     imprimircaminhorecur(ponto_b);
-    printf("\n%d\n", tempo);
+    printf("\n");
 }
+
+//Trata a operação UBSPROX a: roda o Dijkstra completo a partir de a e escolhe a UBS de menor tempo (empate: menor código)
+void ubsprox(Grafo *grafo, const char *codA){
+    No *ponto_a = buscar_ponto(grafo, codA);
+
+    if(ponto_a == NULL){
+        printf("NAOEXISTE\n");
+        return;
+    }
+
+    executaDijkstra(grafo, ponto_a, NULL);
+
+    No *melhor = NULL;
+    No *atual = grafo->inicio;
+    while(atual != NULL){
+        if(atual->eh_ubs && atual->tempominutos != INT_MAX){
+            if(melhor == NULL
+               || atual->tempominutos < melhor->tempominutos
+               || (atual->tempominutos == melhor->tempominutos
+                   && comparar_codigos(atual->ponto, melhor->ponto) < 0)){
+                melhor = atual;
+            }
+        }
+        atual = atual->proximo;
+    }
+
+    if(melhor == NULL){
+        printf("NENHUMA\n");
+    }else{
+        printf("%s %d\n", melhor->ponto, melhor->tempominutos);
+    }
+}
+
+//Merge sort próprio para ordenar os pontos pelo código (o enunciado proíbe qsort no núcleo)
+void intercalar(No **v, No **aux, int inicio, int meio, int fim){
+    int i = inicio, j = meio, k = inicio;
+
+    while(i < meio && j < fim){
+        if(comparar_codigos(v[i]->ponto, v[j]->ponto) <= 0){
+            aux[k++] = v[i++];
+        }else{
+            aux[k++] = v[j++];
+        }
+    }
+    while(i < meio){
+        aux[k++] = v[i++];
+    }
+    while(j < fim){
+        aux[k++] = v[j++];
+    }
+    for(k = inicio; k < fim; k++){
+        v[k] = aux[k];
+    }
+}
+void ordenar_pontos(No **v, No **aux, int inicio, int fim){
+    if(fim - inicio < 2){
+        return;
+    }
+    int meio = (inicio + fim) / 2;
+    ordenar_pontos(v, aux, inicio, meio);
+    ordenar_pontos(v, aux, meio, fim);
+    intercalar(v, aux, inicio, meio, fim);
+}
+
 int isolados(Grafo *grafo, Fila *fila){
     inicializar_visitados(grafo);
     inicializarFila(fila);
@@ -468,7 +575,132 @@ int isolados(Grafo *grafo, Fila *fila){
     return cont;
     
 }
-int main(){
+
+//Trata a operação ISOLADOS: imprime k e depois os k códigos em ordem crescente
+void imprimir_isolados(Grafo *grafo, Fila *fila){
+    int k = isolados(grafo, fila);
+    printf("%d\n", k);
+
+    if(k == 0){
+        return;
+    }
+
+    No **vetor = malloc(k * sizeof(No*));
+    No **aux = malloc(k * sizeof(No*));
+    if(vetor == NULL || aux == NULL){
+        fprintf(stderr, "Sem memoria\n");
+        exit(1);
+    }
+
+    int i = 0;
+    No *atual = grafo->inicio;
+    while(atual != NULL){
+        if(!atual->visitado){
+            vetor[i++] = atual;
+        }
+        atual = atual->proximo;
+    }
+
+    ordenar_pontos(vetor, aux, 0, k);
+
+    for(i = 0; i < k; i++){
+        printf("%s\n", vetor[i]->ponto);
+    }
+
+    free(vetor);
+    free(aux);
+}
+
+// Lê o arquivo inteiro para a memória. Devolve um vetor de linhas e a quantidade em *total.
+char** ler_arquivo(const char *caminho, int *total){
+    FILE *arq = fopen(caminho, "r");
+    if(arq == NULL){
+        fprintf(stderr, "Nao foi possivel abrir %s\n", caminho);
+        exit(1);
+    }
+
+    int capacidade = 1024;
+    int n = 0;
+    char **linhas = malloc(capacidade * sizeof(char*));
+    char buffer[256];
+
+    while(fgets(buffer, sizeof(buffer), arq) != NULL){
+        buffer[strcspn(buffer, "\r\n")] = '\0';
+
+        if(n == capacidade){
+            capacidade *= 2;
+            linhas = realloc(linhas, capacidade * sizeof(char*));
+        }
+        linhas[n] = malloc(strlen(buffer) + 1);
+        strcpy(linhas[n], buffer);
+        n++;
+    }
+
+    fclose(arq);
+    *total = n;
+    return linhas;
+}
+
+// Executa uma linha do arquivo de operações
+void executar_linha(Grafo *grafo, Fila *fila, const char *linha){
+    char op[32], a[64], b[64];
+    int minutos;
+
+    int lidos = sscanf(linha, "%31s %63s %63s %d", op, a, b, &minutos);
+
+    if(lidos <= 0 || op[0] == '#'){
+        return; // linha em branco ou comentário
+    }
+
+    if(strcmp(op, "PONTO") == 0 && lidos >= 2){
+        int eh_ubs = (lidos >= 3 && strcmp(b, "UBS") == 0);
+        adicionar_ponto(grafo, a, eh_ubs);
+    }else if(strcmp(op, "TRECHO") == 0 && lidos == 4){
+        adicionar_trecho(grafo, a, b, minutos);
+    }else if(strcmp(op, "ALAGA") == 0 && lidos >= 3){
+        alagar_trecho(grafo, a, b);
+    }else if(strcmp(op, "LIBERA") == 0 && lidos >= 3){
+        libera_trecho(grafo, a, b);
+    }else if(strcmp(op, "PASSOS") == 0 && lidos >= 3){
+        passos(grafo, fila, a, b);
+    }else if(strcmp(op, "TEMPO") == 0 && lidos >= 3){
+        tempo(grafo, a, b);
+    }else if(strcmp(op, "ROTA") == 0 && lidos >= 3){
+        rota(grafo, a, b);
+    }else if(strcmp(op, "UBSPROX") == 0 && lidos >= 2){
+        ubsprox(grafo, a);
+    }else if(strcmp(op, "ISOLADOS") == 0){
+        imprimir_isolados(grafo, fila);
+    }
+}
+
+int main(int argc, char *argv[]){
+    if(argc < 2){
+        fprintf(stderr, "Uso: %s arquivo_de_operacoes.txt\n", argv[0]);
+        return 1;
+    }
+
+    int total = 0;
+    char **linhas = ler_arquivo(argv[1], &total);
+
+    Grafo *grafo = criarGrafo();
+    Fila fila;
+    inicializarFila(&fila);
+
+    clock_t inicio = clock();
+
+    for(int i = 0; i < total; i++){
+        executar_linha(grafo, &fila, linhas[i]);
+    }
+
+    clock_t fim = clock();
+    long tempo_ms = (long)((fim - inicio) * 1000.0 / CLOCKS_PER_SEC);
+    fprintf(stderr, "TEMPO_MS %ld\n", tempo_ms);
+
+    for(int i = 0; i < total; i++){
+        free(linhas[i]);
+    }
+    free(linhas);
 
     return 0;
 }
